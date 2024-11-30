@@ -1,4 +1,4 @@
-# NavMeshRuntimeRender
+# NavMesh Runtime Render
 Actor for rendering the NavMesh during runtime. The mesh can be rebuilt during runtime, but will have a significant performance impact during creation.
 
 Note: This actor does not use collision, but saving the mesh allows for Collision to be added (Complex as Simple is used by default)
