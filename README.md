@@ -9,7 +9,7 @@ A function has been added for easy UV hit detection.
 
 The rendered mesh can now be saved and exported for further customization. The asset is saved as a StaticMesh along with the assigned Material.
 
-How to use:
+How to use: (This is a video showing the initial prototype of this plugin. An updated video will be added tomorrow night!)
 
 https://github.com/user-attachments/assets/9de551a5-f4af-4778-af9e-32ec88e8f912
 
