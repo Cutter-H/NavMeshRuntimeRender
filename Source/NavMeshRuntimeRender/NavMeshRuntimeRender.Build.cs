@@ -39,7 +39,14 @@ public class NavMeshRuntimeRender : ModuleRules
 				"Slate",
 				"SlateCore",
 				"NavigationSystem",
-                "CustomMeshComponent"
+                "GeometryFramework",
+                "GeometryCore",
+                "GeometryScriptingCore",
+				"AssetRegistry",
+                "StaticMeshDescription",
+                "ModelingComponents",
+                "ModelingComponentsEditorOnly",
+				"CustomMeshComponent"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
