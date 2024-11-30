@@ -16,7 +16,24 @@
 
 ANavMeshRenderer::ANavMeshRenderer() {
 	SetActorTickEnabled(false);
-	UpdateMesh();
+	if (NumberOfTris > 0) {
+		if (IsValid(NavMeshMaterial)) {
+			DynamicNavMeshRender->SetMaterial(0, NavMeshMaterial);
+		}
+		UpdateMesh();
+	}
+#if WITH_EDITOR
+
+	if (IsSelectedInEditor() && bShowFloorDebug) {
+		DrawFloors();
+	}
+	else {
+		if (IsValid(FloorDebug)) {
+			FloorDebug->DestroyComponent();
+		}
+	}
+
+#endif
 }
 
 void ANavMeshRenderer::OnConstruction(const FTransform& transform) {
@@ -46,19 +63,18 @@ void ANavMeshRenderer::OnConstruction(const FTransform& transform) {
 	else {
 		UpdateMesh();
 	}
-	if (NumberOfTris > 0) {
-		if (IsValid(NavMeshMaterial)) {
-			DynamicNavMeshRender->SetMaterial(0, NavMeshMaterial);
-		}
-	}
-	if (bShowFloorDebug) {
+	
+#if WITH_EDITOR
+	if(IsSelectedInEditor() && bShowFloorDebug) {
 		DrawFloors();
 	}
 	else {
 		if (IsValid(FloorDebug)) {
 			FloorDebug->DestroyComponent();
 		}
-	}
+	}	
+	
+#endif
 }
 
 const UDynamicMeshComponent* ANavMeshRenderer::GetNavMeshRender() const {
@@ -241,7 +257,7 @@ FVector2D ANavMeshRenderer::GetUV_Coordinate(const FVector& location) const {
 		 }
 	 }
 	 const float floorX = floor % FloorRowSize;
-	 const float floorY = (float)floor / (float)FloorRowSize;
+	 const float floorY = FMath::TruncToInt((float)floor / (float)FloorRowSize);
 	 // retVal is not the correct uv position if the floor takes up the entire UV
 	 retVal = FVector2f((relativeLocation.X / NavMeshSize.X) * (1 - UV_IslandMargins), 
 		 (relativeLocation.Y / NavMeshSize.Y) * (1 - UV_IslandMargins));
