@@ -15,6 +15,7 @@ class NAVMESHRUNTIMERENDER_API UDynamicNavMeshRendererComponent : public UDynami
 	GENERATED_BODY()
 public:
 	virtual FBoxSphereBounds CalcBounds(const FTransform& LocalToWorld) const override;
+	virtual uint64 GetHiddenEditorViews() const override;
 	UPROPERTY()
 	FVector BoundsExtents;
 };

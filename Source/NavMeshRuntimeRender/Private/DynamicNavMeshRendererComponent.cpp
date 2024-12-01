@@ -10,3 +10,7 @@ FBoxSphereBounds UDynamicNavMeshRendererComponent::CalcBounds(const FTransform& 
 	retVal.SphereRadius = FMath::Max3(BoundsExtents.X, BoundsExtents.Y, BoundsExtents.Z);
 	return retVal;
 }
+
+uint64 UDynamicNavMeshRendererComponent::GetHiddenEditorViews() const {
+	return 0;
+}

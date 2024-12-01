@@ -22,7 +22,10 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnNavMeshRenderGenericSignature OnMeshUpdate;
 	ANavMeshRenderer();
+	virtual void PostLoadSubobjects(FObjectInstancingGraph* OuterInstanceGraph) override;
 	virtual void OnConstruction(const FTransform& transform) override;
+	virtual void BeginPlay() override;
+
 	/*
 	* Returns the rendered component.
 	*/UFUNCTION(BlueprintCallable, Category = "NavMesh Render")

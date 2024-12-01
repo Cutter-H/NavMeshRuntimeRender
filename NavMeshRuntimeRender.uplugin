@@ -29,6 +29,10 @@
 		{
 			"Name": "MeshModelingToolset",
 			"Enabled": true
+		},
+		{
+			"Name": "CustomMeshComponent",
+			"Enabled": true
 		}
 	]
 }

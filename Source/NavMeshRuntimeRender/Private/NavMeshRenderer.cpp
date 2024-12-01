@@ -9,21 +9,42 @@
 
 #include "CustomMeshComponent.h"
 #include "Components/DynamicMeshComponent.h"
+
 #include "DynamicMesh/MeshAttributeUtil.h"
+#include "Runtime/CoreUObject/Public/UObject/ConstructorHelpers.h"
 
 #include "ModelingObjectsCreationAPI.h"
 #include "AssetUtils/CreateStaticMeshUtil.h"
 
 ANavMeshRenderer::ANavMeshRenderer() {
-	SetActorTickEnabled(false);
-	if (NumberOfTris > 0) {
-		if (IsValid(NavMeshMaterial)) {
-			DynamicNavMeshRender->SetMaterial(0, NavMeshMaterial);
+	/* Set default materials from plugin dir */ {
+		if (!IsValid(NavMeshMaterial)) {
+			const FString defaultNavMatDir = ("/Script/Engine.Material'/NavMeshRuntimeRender/DefaultMaterials/M_DefaultRenderer.M_DefaultRenderer'");
+			static ConstructorHelpers::FObjectFinder<UMaterialInterface> defaultNavMat(*defaultNavMatDir);
+			if (defaultNavMat.Object) {
+				NavMeshMaterial = defaultNavMat.Object;
+			}
 		}
-		UpdateMesh();
+		if (!IsValid(FloorDebugMaterial)) {
+			const FString defaultFloorMatDir = ("/Script/Engine.Material'/NavMeshRuntimeRender/DefaultMaterials/M_FloorDebug.M_FloorDebug'");
+			static ConstructorHelpers::FObjectFinder<UMaterialInterface> defaultFloorMat(*defaultFloorMatDir);
+			if (defaultFloorMat.Object) {
+				FloorDebugMaterial = defaultFloorMat.Object;
+			}
+		}
 	}
+	
+	DynamicNavMeshRender = CreateDefaultSubobject<UDynamicNavMeshRendererComponent>(TEXT("NavMeshRender"));
+	if (IsValid(DynamicNavMeshRender)) {
+		DynamicNavMeshRender->SetupAttachment(GetRootComponent());
+		if (NumberOfTris > 0) {
+			if (IsValid(NavMeshMaterial)) {
+				DynamicNavMeshRender->SetMaterial(0, NavMeshMaterial);
+			}
+		}
+	}
+	SetActorTickEnabled(false);
 #if WITH_EDITOR
-
 	if (IsSelectedInEditor() && bShowFloorDebug) {
 		DrawFloors();
 	}
@@ -32,8 +53,12 @@ ANavMeshRenderer::ANavMeshRenderer() {
 			FloorDebug->DestroyComponent();
 		}
 	}
-
 #endif
+}
+
+void ANavMeshRenderer::PostLoadSubobjects(FObjectInstancingGraph* OuterInstanceGraph) {
+	UpdateMesh();
+	Super::PostLoadSubobjects(OuterInstanceGraph);
 }
 
 void ANavMeshRenderer::OnConstruction(const FTransform& transform) {
@@ -42,39 +67,28 @@ void ANavMeshRenderer::OnConstruction(const FTransform& transform) {
 	}
 	else {
 		SetActorTransform(FTransform());
-	}
-	if (const ARecastNavMesh* navMesh = GetNavMesh()) {
-		NavMeshSize = navMesh->GetBounds().GetSize();
-		NavMeshCorner = navMesh->GetBounds().GetCenter() - NavMeshSize / 2;
-		NumberOfFloors = 1;
-		AdditionalFloorHeights.Sort();
-		for (float floorHeight : AdditionalFloorHeights) {
-			if (floorHeight <= NavMeshSize.Z && floorHeight > 0) {
-				NumberOfFloors++;
-			}
-		}
-	}
-	if(!IsValid(DynamicNavMeshRender)){
-		DynamicNavMeshRender = Cast<UDynamicNavMeshRendererComponent>(AddComponentByClass(UDynamicNavMeshRendererComponent::StaticClass(), true, FTransform(), false));
-		if (bRebuildOnConstruct) {
-			UpdateMesh();
-		}
-	}
-	else {
-		UpdateMesh();
-	}
-	
+	}	
 #if WITH_EDITOR
-	if(IsSelectedInEditor() && bShowFloorDebug) {
+	if(bShowFloorDebug) {
 		DrawFloors();
 	}
 	else {
 		if (IsValid(FloorDebug)) {
 			FloorDebug->DestroyComponent();
 		}
-	}	
-	
+	}
+#else
+	if (IsValid(FloorDebug)) {
+		FloorDebug->DestroyComponent();
+	}
 #endif
+}
+
+void ANavMeshRenderer::BeginPlay() {
+	Super::BeginPlay();
+	if (IsValid(FloorDebug)) {
+		FloorDebug->DestroyComponent();
+	}
 }
 
 const UDynamicMeshComponent* ANavMeshRenderer::GetNavMeshRender() const {
@@ -88,12 +102,29 @@ FVector2D ANavMeshRenderer::GetUV_Coordinate(const FVector& location) const {
 
  void ANavMeshRenderer::UpdateMesh(){
 	 if (!IsValid(DynamicNavMeshRender)) {
-		 DynamicNavMeshRender = Cast<UDynamicNavMeshRendererComponent>(AddComponentByClass(UDynamicNavMeshRendererComponent::StaticClass(), true, FTransform(), false));
+		 DynamicNavMeshRender = CreateDefaultSubobject<UDynamicNavMeshRendererComponent>(TEXT("NavMeshRender"));
+		 if (IsValid(DynamicNavMeshRender)) {
+			 DynamicNavMeshRender->SetupAttachment(GetRootComponent());
+			 if (NumberOfTris > 0) {
+				 if (IsValid(NavMeshMaterial)) {
+					 DynamicNavMeshRender->SetMaterial(0, NavMeshMaterial);
+				 }
+			 }
+		 }
 	 }
 	 const ARecastNavMesh* navMesh = GetNavMesh();
 	 if (!IsValid(navMesh)) {
 		 UE_LOG(LogNavigation, Warning, TEXT("NavMeshRenderer found no Navigation Mesh"));
 		 return;
+	 }
+	 NavMeshSize = navMesh->GetBounds().GetSize();
+	 NavMeshCorner = navMesh->GetBounds().GetCenter() - NavMeshSize / 2;
+	 NumberOfFloors = 1;
+	 AdditionalFloorHeights.Sort();
+	 for (float floorHeight : AdditionalFloorHeights) {
+		 if (floorHeight <= NavMeshSize.Z && floorHeight > 0) {
+			 NumberOfFloors++;
+		 }
 	 }
 	 bRebuildOnConstruct = true;
 	 DynamicNavMeshRender->BoundsExtents = NavMeshSize;
@@ -139,8 +170,8 @@ FVector2D ANavMeshRenderer::GetUV_Coordinate(const FVector& location) const {
 				 triB = AssignNewVert(currentVerts[currentVerts.Num() - 1]);
 				 triC = AssignNewVert(currentVerts[0]);
 				 renderedMesh->AppendTriangle(triA, triB, triC, currentGroup);
-				 currentGroup++;
 			 }
+			 currentGroup++;
 		 }
 	 }
 	 DynamicNavMeshRender->GetDynamicMesh()->ProcessMesh([this](const FDynamicMesh3& ProcessMesh) {
@@ -292,6 +323,7 @@ FVector2D ANavMeshRenderer::GetUV_Coordinate(const FVector& location) const {
 	 DynamicNavMeshRender->MarkRenderStateDirty();
 #if WITH_EDITOR
 	 DynamicNavMeshRender->MarkPackageDirty();
+	 DynamicNavMeshRender->GetDynamicMesh()->MarkPackageDirty();
 #endif
 	 OnMeshUpdate.Broadcast();
  }
@@ -306,6 +338,16 @@ FVector2D ANavMeshRenderer::GetUV_Coordinate(const FVector& location) const {
 	 }
 	 bool bDrewFinal = false;
 	 TArray<FCustomMeshTriangle> tris;
+	 tris.Add(FCustomMeshTriangle(
+		 NavMeshCorner + FVector(NavMeshSize.X, 0.f, -.1f),
+		 NavMeshCorner + FVector(0.f, 0.f, -.1f),
+		 NavMeshCorner + FVector(0.f, NavMeshSize.Y, -.1f)
+	 ));
+	 tris.Add(FCustomMeshTriangle(
+		 NavMeshCorner + FVector(NavMeshSize.X, 0.f, -.1f),
+		 NavMeshCorner + FVector(0.f, NavMeshSize.Y, -.1f),
+		 NavMeshCorner + FVector(NavMeshSize.X, NavMeshSize.Y, -.1f)
+	 ));
 	 for (float floorHeight : AdditionalFloorHeights) {
 		 if ((floorHeight > 0)) {
 			 if (floorHeight > NavMeshSize.Z) {
@@ -315,8 +357,8 @@ FVector2D ANavMeshRenderer::GetUV_Coordinate(const FVector& location) const {
 				 bDrewFinal = true;
 			 }
 			 tris.Add(FCustomMeshTriangle(
-				 NavMeshCorner + FVector(0.f, 0.f, floorHeight),
 				 NavMeshCorner + FVector(NavMeshSize.X, 0.f, floorHeight),
+				 NavMeshCorner + FVector(0.f, 0.f, floorHeight),
 				 NavMeshCorner + FVector(0.f, NavMeshSize.Y, floorHeight)
 			 ));
 			 tris.Add(FCustomMeshTriangle(
