@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Cutter H // 2024
 
 using UnrealBuildTool;
 
@@ -47,7 +47,6 @@ public class NavMeshRuntimeRender : ModuleRules
                 "ModelingComponents",
                 "ModelingComponentsEditorOnly",
 				"CustomMeshComponent"
-				// ... add private dependencies that you statically link with here ...	
 			}
 			);
 		

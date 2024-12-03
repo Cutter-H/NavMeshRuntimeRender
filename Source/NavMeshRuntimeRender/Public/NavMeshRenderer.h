@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Cutter H // 2024
 
 #pragma once
 
@@ -11,15 +11,18 @@ class UCustomMeshComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnNavMeshRenderGenericSignature);
 
-/**
- * 
+/*
+ * Actor that provides a visual representation of the world's navigation mesh during runtime. Most features are present in the Editor.
+ * This is not replicated.
  */
 UCLASS(NotBlueprintable, Placeable, meta = (BlueprintSpawnableComponent))
 class NAVMESHRUNTIMERENDER_API ANavMeshRenderer : public AActor
 {
 	GENERATED_BODY()
 public:
-	UPROPERTY(BlueprintAssignable)
+	/*
+	* Called after updating the mesh.
+	*/UPROPERTY(BlueprintAssignable)
 	FOnNavMeshRenderGenericSignature OnMeshUpdate;
 	ANavMeshRenderer();
 	virtual void PostLoadSubobjects(FObjectInstancingGraph* OuterInstanceGraph) override;
@@ -33,7 +36,7 @@ public:
 	/*
 	* Returns the UV coordinate at the given locatino.
 	*/UFUNCTION(BlueprintCallable, Category = "NavMesh Render")
-	FVector2D GetUV_Coordinate(const FVector& location) const;
+	FVector2D GetUV_Coordinate(const FVector& location, float centralHeight) const;
 	/*
 	* Updates the render to fit the world's NavMesh.
 	* WARNING: If done during runtime this will cause momentary freezing
@@ -60,12 +63,14 @@ private:
 	/*
 	* Assigns a new vertex along with UVs, normals, etc.
 	*/UFUNCTION()
-	int AssignNewVert(const FVector& location);
+	int AssignNewVert(const FVector& location, float UVHeight);
 	/*
 	* Calculates a UV coordinate for the given locaiton.
 	*/UFUNCTION()
-	FVector2f UVCoord(const FVector& location) const;
-	UFUNCTION()
+	FVector2f UVCoord(const FVector& location, float centralHeight) const;
+	/*
+	* Used for a quick grab of the world's recast Nav Mesh.
+	*/UFUNCTION()
 	const ARecastNavMesh* GetNavMesh() const;
 	/*
 	* Raises/Lowers the rendered mesh. 
@@ -124,8 +129,6 @@ private:
 	* This is also the column size, since the UVs should be organized into square arrays.
 	*/UPROPERTY()
 	int FloorRowSize = 1;
-	UPROPERTY()
-	bool bRebuildOnConstruct = false;
 	/*
 	* Called after the mesh has been updated.
 	*/UFUNCTION()

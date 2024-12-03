@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Cutter H // 2024
 
 
 #include "NavMeshRenderer.h"
@@ -62,12 +62,7 @@ void ANavMeshRenderer::PostLoadSubobjects(FObjectInstancingGraph* OuterInstanceG
 }
 
 void ANavMeshRenderer::OnConstruction(const FTransform& transform) {
-	if (const ARecastNavMesh* navMesh = GetNavMesh()) {
-		SetActorTransform(navMesh->GetActorTransform());
-	}
-	else {
 		SetActorTransform(FTransform());
-	}	
 #if WITH_EDITOR
 	if(bShowFloorDebug) {
 		DrawFloors();
@@ -95,8 +90,8 @@ const UDynamicMeshComponent* ANavMeshRenderer::GetNavMeshRender() const {
     return DynamicNavMeshRender;
 }
 
-FVector2D ANavMeshRenderer::GetUV_Coordinate(const FVector& location) const {
-	FVector2f retVal = UVCoord(location);
+FVector2D ANavMeshRenderer::GetUV_Coordinate(const FVector& location, float centralHeight) const {
+	FVector2f retVal = UVCoord(location, centralHeight);
 	return FVector2D(retVal.X, retVal.Y);
 }
 
@@ -126,7 +121,6 @@ FVector2D ANavMeshRenderer::GetUV_Coordinate(const FVector& location) const {
 			 NumberOfFloors++;
 		 }
 	 }
-	 bRebuildOnConstruct = true;
 	 DynamicNavMeshRender->BoundsExtents = NavMeshSize;
 	 DynamicNavMeshRender->UpdateBounds();
 	 FloorRowSize = 1;
@@ -160,15 +154,16 @@ FVector2D ANavMeshRenderer::GetUV_Coordinate(const FVector& location) const {
 				 if (!navMesh->GetPolyVerts(poly.Ref, currentVerts)) {
 					 continue;
 				 }
+				 const float uvHeight = poly.Center.Z;
 				 for (int i = 1; i < currentVerts.Num(); i++) {
-					 triA = AssignNewVert(poly.Center);
-					 triB = AssignNewVert(currentVerts[i - 1]);
-					 triC = AssignNewVert(currentVerts[i]);
+					 triA = AssignNewVert(poly.Center, uvHeight);
+					 triB = AssignNewVert(currentVerts[i - 1], uvHeight);
+					 triC = AssignNewVert(currentVerts[i], uvHeight);
 					 renderedMesh->AppendTriangle(triA, triB, triC, currentGroup);//allVectors.Add(currentVerts[i]);
 				 }
 				 // Complete the circle
-				 triB = AssignNewVert(currentVerts[currentVerts.Num() - 1]);
-				 triC = AssignNewVert(currentVerts[0]);
+				 triB = AssignNewVert(currentVerts[currentVerts.Num() - 1], uvHeight);
+				 triC = AssignNewVert(currentVerts[0], uvHeight);
 				 renderedMesh->AppendTriangle(triA, triB, triC, currentGroup);
 			 }
 			 currentGroup++;
@@ -193,7 +188,6 @@ FVector2D ANavMeshRenderer::GetUV_Coordinate(const FVector& location) const {
 	 if (!IsValid(DynamicNavMeshRender)) {
 		 return;
 	 }
-	 bRebuildOnConstruct = false;
 	 DynamicNavMeshRender->GetMesh()->Clear();
 	 FinishedProcessing();
  }
@@ -259,13 +253,13 @@ FVector2D ANavMeshRenderer::GetUV_Coordinate(const FVector& location) const {
 	 UE_LOG(LogNavigation, Warning, TEXT("NavMeshRenderer cannot save during runtime"));
  }
 
- int ANavMeshRenderer::AssignNewVert(const FVector& location) {
+ int ANavMeshRenderer::AssignNewVert(const FVector& location, float UVHeight) {
 	 UE::Geometry::FVertexInfo info;
 	 info.Position = location + FVector(0.f, 0.f, ZOffset);
 	 info.bHaveUV = true;
 	 info.bHaveN = true;
 	 info.bHaveC = true;
-	 info.UV = UVCoord(location);
+	 info.UV = UVCoord(location, UVHeight);
 	 info.Normal = FVector3f::UpVector;
 	 info.Color = FVector3f();
 	 if (!IsValid(DynamicNavMeshRender)) {
@@ -278,12 +272,13 @@ FVector2D ANavMeshRenderer::GetUV_Coordinate(const FVector& location) const {
 	 return retVal;
  }
 
- FVector2f ANavMeshRenderer::UVCoord(const FVector& location) const {
+ FVector2f ANavMeshRenderer::UVCoord(const FVector& location, float centralHeight) const {
 	 FVector2f retVal;
 	 const FVector relativeLocation = location - NavMeshCorner;
+	 const float relativeCentralHeight = centralHeight - NavMeshCorner.Z;
 	 int floor = 0;
 	 for (float floorHeight : AdditionalFloorHeights) {
-		 if (relativeLocation.Z >= floorHeight) {
+		 if (relativeCentralHeight >= floorHeight) {
 			 floor++;
 		 }
 	 }
