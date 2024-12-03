@@ -1,5 +1,5 @@
 # NavMesh Runtime Render
-Actor for rendering the NavMesh during runtime. The mesh can be rebuilt during runtime, but will have a significant performance impact during creation.
+Actor for rendering the NavMesh during runtime. The mesh CANNOT be rebuilt during runtime.
 
 Note: This actor does not use collision, but saving the mesh allows for Collision to be added (Complex as Simple is used by default)
 
@@ -9,7 +9,12 @@ A function has been added for easy UV hit detection.
 
 The rendered mesh can now be saved and exported for further customization. The asset is saved as a StaticMesh along with the assigned Material.
 
-How to use: (This is a video showing the initial prototype of this plugin. An updated video will be added tomorrow night!)
+How to use:
 
-https://github.com/user-attachments/assets/9de551a5-f4af-4778-af9e-32ec88e8f912
+https://github.com/user-attachments/assets/6ce7c937-0b22-478a-be4d-120e04db852a
+
+### Example use case video.
+
+[![Use case](https://img.youtube.com/vi/12yw97yIACY/0.jpg)](https://www.youtube.com/watch?v=12yw97yIACY)
+
 
